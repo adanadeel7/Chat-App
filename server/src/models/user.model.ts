@@ -7,7 +7,8 @@ interface userInterface {
     email : string, 
     password : string, 
     profilePic : string, 
-    bio : string
+    bio : string,
+    tokenVersion : number;
     
 }
 
@@ -36,6 +37,11 @@ const userSchema = new mongoose.Schema({
         type : String, 
 
     },
+    tokenVersion : {
+       type : Number, 
+        default : 0 
+
+    }
 
 
 }, {
