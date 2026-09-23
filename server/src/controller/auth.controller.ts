@@ -197,4 +197,4 @@ async function logoutHandler(req : Request, res : Response) {
 }
 
 
-export {registerHandler,loginHandler}
+export {registerHandler,loginHandler,logoutHandler,refreshHandler}
