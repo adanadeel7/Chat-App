@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { LoginSchema, RegisterSchema } from "../schema/auth.schema";
 import { User } from "../models/user.model";
 import {checkPassword, hashPassword} from "../lib/Hash"
-import { createAccessToken, createRefreshToken } from "../lib/token";
+import { createAccessToken, createRefreshToken, verifyRefreshToken } from "../lib/token";
 
 async function registerHandler(req: Request, res: Response) {
   try {
@@ -89,7 +89,7 @@ async function loginHandler(req: Request, res: Response) {
         })
     }
 
-    const isProd = process.env.NODE_ENV
+    const isProd = process.env.NODE_ENV === "production"
     const accessToken = createAccessToken(user.id, Number(user.tokenVersion))
     const refreshToken = createRefreshToken(user.id, Number(user.tokenVersion))
 
@@ -117,5 +117,84 @@ async function loginHandler(req: Request, res: Response) {
 }
 
 
+async function refreshHandler(req: Request, res: Response) {
+  try { 
+    const token = req.cookies?.refreshToken as string | undefined
 
-export {registerHandler}
+    if(!token) { 
+      return res.status(401).json({message : "Refresh token missing"})
+    }
+
+    const payload = verifyRefreshToken(token)
+
+    const user = await User.findById(payload.sub)
+
+    if(!user) { 
+      return res.status(401).json({message : "User not found"})
+    }
+
+    if(user.tokenVersion !== payload.tokenVersion) { 
+      return res.status(401).json({ message: "Refresh token invalidated" });
+    }
+
+    const newAccessToken = createAccessToken(
+      user.id,
+      Number(user.tokenVersion),
+      
+    );
+
+    const newRefreshToken = createRefreshToken(
+      user.id,
+      Number(user.tokenVersion),
+      
+    );
+
+     const isProd = process.env.NODE_ENV === "production";
+
+
+      res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+     return res.status(200).json({
+      message: "Login Success",
+      accessToken: newAccessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+      },
+    });
+  } catch(error) { 
+    console.log(error);
+     return res.status(500).json({
+      message: "Internal Error",
+    });
+  }
+}
+
+
+async function logoutHandler(req : Request, res : Response) { 
+  const token = req.cookies?.refreshToken as string | undefined
+
+  if(token) { 
+    try { 
+      const payload = verifyRefreshToken(token)
+      await User.findByIdAndUpdate(payload.sub, { $inc : {tokenVersion:1}})
+    } catch(error) { 
+
+    }
+
+  }
+
+  res.clearCookie("refreshToken",{path : "/"})
+
+  return res.status(200).json({
+    message : "User Logout"
+  })
+}
+
+
+export {registerHandler,loginHandler}
