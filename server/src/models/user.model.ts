@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { string } from "zod";
+import { boolean, string } from "zod";
 
 interface userInterface { 
     
@@ -12,7 +12,7 @@ interface userInterface {
     
 }
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema<userInterface>({
     name : { 
         type : String, 
         required : true, 
@@ -41,14 +41,15 @@ const userSchema = new mongoose.Schema({
        type : Number, 
         default : 0 
 
-    }
+    },
 
+    
 
 }, {
     timestamps : true
 })
 
 
-const User = mongoose.model("User",userSchema)
+const User = mongoose.model<userInterface>("User",userSchema)
 
 export {User, userInterface}
